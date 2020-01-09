@@ -1,4 +1,5 @@
 import asyncio
+from io import BytesIO
 
 from aiohttp import web
 
@@ -20,17 +21,29 @@ async def run(cmd, read_out, read_err):
 
 routes = web.RouteTableDef()
 
+READ_CHUNK = 1024 ** 2
+HTTP_CHUNK = 1024 ** 2
+
+
 @routes.get('/')
 async def run_cmd(request):
     r = web.StreamResponse()
     await r.prepare(request)
     r.enable_chunked_encoding()
     async def stdout(pipe):
+        buffer = BytesIO()
         while True:
-            chunk = await pipe.read(1024 ** 2)
+            chunk = await pipe.read(READ_CHUNK)
             if chunk == b"":
                 break
-            await r.write(chunk)
+            buffer.write(chunk)
+            if buffer.tell() >= HTTP_CHUNK:
+                buffer.seek(0)
+                await r.write(buffer.read())
+                buffer.seek(0)
+        if buffer.tell() > 0:
+            buffer.seek(0)
+            await r.write(buffer.read())
         await r.write_eof()
 
     async def stderr(pipe):
