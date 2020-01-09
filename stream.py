@@ -1,4 +1,5 @@
 import asyncio
+import uuid
 from io import BytesIO
 
 from aiohttp import web
@@ -28,6 +29,8 @@ HTTP_CHUNK = 1024 ** 2
 @routes.get('/')
 async def run_cmd(request):
     r = web.StreamResponse()
+    session = uuid.uuid4()
+    r.headers['X-Session'] = session.hex
     await r.prepare(request)
     r.enable_chunked_encoding()
     async def stdout(pipe):
@@ -59,5 +62,6 @@ async def run_cmd(request):
 if __name__ == "__main__":
     app = web.Application()
     app['cmd'] = 'tree ~/Downloads/'
+    app['sessions'] = dict()
     app.add_routes(routes)
     web.run_app(app)
