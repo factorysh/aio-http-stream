@@ -25,7 +25,11 @@ class Session:
         del self.data[key]
 
     def __setitem__(self, key, value):
-        if self.max_size > 0 and key not in self.data and len(self.data) > self.max_size:
+        if (
+            self.max_size > 0
+            and key not in self.data
+            and len(self.data) > self.max_size
+        ):
             raise Exception("Your session is full")
         self.data[key] = (time.monotonic(), value)
 
