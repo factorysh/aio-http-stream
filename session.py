@@ -50,7 +50,7 @@ class Session:
         keys = list()
         old = list()
         ts = time.monotonic()
-        for k in self.data.items():
+        for k in self.data.keys():
             if (ts - self.data[k][0]) > self.max_age:
                 old.append(k)
             else:
