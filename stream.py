@@ -7,19 +7,22 @@ from aiohttp import web
 from session import Session
 
 
-async def read_process(process, read_stdout, read_stderr):
-        out = asyncio.ensure_future(read_stdout(process.stdout))
-        err = asyncio.ensure_future(read_stderr(process.stderr))
-        return await asyncio.gather(out, err, process.wait())
+class ReadingProcess:
+    def __init__(self, process, read_stdout, read_stderr):
+        self.process = process
+        self.out = asyncio.ensure_future(read_stdout(process.stdout))
+        self.err = asyncio.ensure_future(read_stderr(process.stderr))
+
+    async def wait(self):
+        return await asyncio.gather(self.out, self.err, self.process.wait())
 
 
-async def run(cmd, read_out, read_err):
+async def run(cmd: str, read_out, read_err) -> ReadingProcess:
     proc = await asyncio.create_subprocess_shell(
         cmd,
         stdout=asyncio.subprocess.PIPE,
         stderr=asyncio.subprocess.PIPE)
-    await read_process(proc, read_out, read_err)
-    print(proc.returncode)
+    return ReadingProcess(proc, read_out, read_err)
 
 
 routes = web.RouteTableDef()
@@ -32,7 +35,6 @@ HTTP_CHUNK = 1024 ** 2
 async def run_cmd(request):
     r = web.StreamResponse()
     session = uuid.uuid4()
-    request.app['sessions'][session.hex] = None
     r.headers['X-Session'] = session.hex
     await r.prepare(request)
     r.enable_chunked_encoding()
@@ -59,7 +61,9 @@ async def run_cmd(request):
                 break
             print(line)
 
-    await run(request.app['cmd'], stdout, stderr)
+    p = await run(request.app['cmd'], stdout, stderr)
+    request.app['sessions'][session.hex] = p
+    await p.wait()
 
 
 @routes.get('/session')
@@ -67,10 +71,12 @@ async def sessions(request):
     return web.json_response(request.app['sessions'].keys())
 
 @routes.get('/session/{id}')
-async def session(request, id):
-    if id not in request.app['sessions']:
+async def session(request):
+    _id = request.match_info['id']
+    if _id not in request.app['sessions']:
         return web.Response(status=404)
-
+    session = request.app['sessions'][_id]
+    return web.json_response(dict(id=_id, pid=session.process.pid))
 
 
 if __name__ == "__main__":
