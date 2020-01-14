@@ -14,7 +14,8 @@ class ReadingProcess:
         self.err = asyncio.ensure_future(read_stderr(process.stderr))
 
     async def wait(self):
-        return await asyncio.gather(self.out, self.err, self.process.wait())
+        await asyncio.gather(self.out, self.err)#, self.process.wait())
+        return self.process.returncode
 
 
 async def run(cmd: str, read_out, read_err) -> ReadingProcess:
