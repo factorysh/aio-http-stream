@@ -43,3 +43,18 @@ class Session:
         for k in garbage:
             del self.data[k]
         return len(garbage)
+
+    def keys(self):
+        if self.max_age == 0:
+            return self.data.keys()
+        keys = list()
+        old = list()
+        ts = time.monotonic()
+        for k in self.data.items():
+            if (ts - self.data[k][0]) > self.max_age:
+                old.append(k)
+            else:
+                keys.append(k)
+        for k in old:
+            del self.data[k]
+        return keys
