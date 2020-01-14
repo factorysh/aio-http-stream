@@ -14,8 +14,13 @@ class ReadingProcess:
     """
     Process wrapper for reading it with callbacks.
     """
-    def __init__(self, process: Process, read_stdout: Callable[[asyncio.StreamReader], None],
-                 read_stderr: Callable[[asyncio.StreamReader], None]):
+
+    def __init__(
+        self,
+        process: Process,
+        read_stdout: Callable[[asyncio.StreamReader], None],
+        read_stderr: Callable[[asyncio.StreamReader], None],
+    ):
         self.process = process
         self.out = asyncio.ensure_future(read_stdout(process.stdout))
         self.err = asyncio.ensure_future(read_stderr(process.stderr))
@@ -49,8 +54,10 @@ async def run_cmd(request):
 
     class size:
         value = 0
+
         def incr(self, value):
             self.value += value
+
     s = size()
     m = hashlib.sha256()
 
@@ -83,8 +90,9 @@ async def run_cmd(request):
 
     p = await run(request.app["cmd"], stdout, stderr)
     await p.wait()
-    request.app["sessions"][session.hex] = dict(process=p, size=s.value,
-                                                hash=m.hexdigest())
+    request.app["sessions"][session.hex] = dict(
+        process=p, size=s.value, hash=m.hexdigest()
+    )
 
 
 @routes.get("/session")
@@ -98,8 +106,7 @@ async def session(request):
     if _id not in request.app["sessions"]:
         return web.Response(status=404)
     session = request.app["sessions"][_id]
-    return web.json_response(dict(id=_id, size=session['size'],
-                                  hash=session['hash']))
+    return web.json_response(dict(id=_id, size=session["size"], hash=session["hash"]))
 
 
 @routes.put("/session/{id}/_kill")
