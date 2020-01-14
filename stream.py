@@ -46,13 +46,15 @@ async def run_cmd(request):
             if chunk == b"":
                 break
             buffer.write(chunk)
-            if buffer.tell() >= HTTP_CHUNK:
+            poz = buffer.tell()
+            if poz >= HTTP_CHUNK:
                 buffer.seek(0)
-                await r.write(buffer.read())
+                await r.write(buffer.read(poz))
                 buffer.seek(0)
-        if buffer.tell() > 0:
+        poz = buffer.tell()
+        if poz > 0:
             buffer.seek(0)
-            await r.write(buffer.read())
+            await r.write(buffer.read(poz))
         await r.write_eof()
 
     async def stderr(pipe):
