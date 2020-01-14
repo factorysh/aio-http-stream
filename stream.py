@@ -1,6 +1,8 @@
 import asyncio
+from asyncio.subprocess import Process
 import uuid
 from io import BytesIO
+from typing import Callable
 
 from aiohttp import web
 
@@ -8,12 +10,17 @@ from session import Session
 
 
 class ReadingProcess:
-    def __init__(self, process, read_stdout, read_stderr):
+    """
+    Process wrapper for reading it with callbacks.
+    """
+    def __init__(self, process: Process, read_stdout: Callable[[asyncio.StreamReader], None],
+                 read_stderr: Callable[[asyncio.StreamReader], None]):
         self.process = process
         self.out = asyncio.ensure_future(read_stdout(process.stdout))
         self.err = asyncio.ensure_future(read_stderr(process.stderr))
 
-    async def wait(self):
+    async def wait(self) -> int:
+        "Wait for process ending."
         await asyncio.gather(self.out, self.err)  # , self.process.wait())
         return self.process.returncode
 
