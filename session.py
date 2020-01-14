@@ -21,7 +21,7 @@ class Session:
             raise IndexError()
         return value
 
-    def __delitem(self, key):
+    def __delitem__(self, key):
         del self.data[key]
 
     def __setitem__(self, key, value):
