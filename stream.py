@@ -70,6 +70,7 @@ async def run_cmd(request):
 async def sessions(request):
     return web.json_response(request.app['sessions'].keys())
 
+
 @routes.get('/session/{id}')
 async def session(request):
     _id = request.match_info['id']
@@ -77,6 +78,17 @@ async def session(request):
         return web.Response(status=404)
     session = request.app['sessions'][_id]
     return web.json_response(dict(id=_id, pid=session.process.pid))
+
+
+@routes.put('/session/{id}/_kill')
+async def kill(request):
+    _id = request.match_info['id']
+    if _id not in request.app['sessions']:
+        return web.Response(status=404)
+    session = request.app['sessions'][_id]
+    session.process.kill()
+    del request.app['sessions'][_id]
+    return web.Response(status=204)
 
 
 if __name__ == "__main__":
