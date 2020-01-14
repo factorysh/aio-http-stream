@@ -1,8 +1,23 @@
+"""
+Store things and forget them.
+"""
+
+
 import time
 
 
 class Session:
-    def __init__(self, max_size=0, max_age=0):
+    """
+    Session acts a dict, with a max size, and it forgets old items.
+
+    Eviction is lazy, or explicit, with garbage collection.
+
+    The code is compatible with asyncio.
+    """
+
+    def __init__(self, max_size: int = 0, max_age: int = 0) -> None:
+        assert max_size >= 0, "Positive max_size, please"
+        assert max_age >= 0, "Positive max_age, please"
         self.max_size = max_size
         self.max_age = max_age
         self.data = dict()
@@ -19,6 +34,7 @@ class Session:
             "too old"
             del self.data[key]
             raise IndexError()
+        self.data[key] = (ts, value)  # let refresh the timer
         return value
 
     def __delitem__(self, key):
@@ -36,9 +52,9 @@ class Session:
     def __len__(self):
         return len(self.data)
 
-    def garbage_collector(self):
-        if self.max_age == 0:
-            raise Exception("Garbage collection with max_age=0 is a strange idea")
+    def garbage_collector(self) -> int:
+        "Looking for rotten items and removing them. Returns number of evictions"
+        assert self.max_age != 0, "Garbage collection with max_age=0 is a strange idea"
         ts = time.monotonic()
         garbage = list()
         for k, v in self.data.items():
