@@ -2,6 +2,7 @@ import asyncio
 from asyncio.subprocess import Process
 import uuid
 from io import BytesIO
+import hashlib
 from typing import Callable
 
 from aiohttp import web
@@ -46,6 +47,13 @@ async def run_cmd(request):
     await r.prepare(request)
     r.enable_chunked_encoding()
 
+    class size:
+        value = 0
+        def incr(self, value):
+            self.value += value
+    s = size()
+    m = hashlib.sha256()
+
     async def stdout(pipe):
         buffer = BytesIO()
         while True:
@@ -53,6 +61,8 @@ async def run_cmd(request):
             if chunk == b"":
                 break
             buffer.write(chunk)
+            s.incr(len(chunk))
+            m.update(chunk)
             poz = buffer.tell()
             if poz >= HTTP_CHUNK:
                 buffer.seek(0)
@@ -72,8 +82,9 @@ async def run_cmd(request):
             print(line)
 
     p = await run(request.app["cmd"], stdout, stderr)
-    request.app["sessions"][session.hex] = p
     await p.wait()
+    request.app["sessions"][session.hex] = dict(process=p, size=s.value,
+                                                hash=m.hexdigest())
 
 
 @routes.get("/session")
@@ -87,7 +98,8 @@ async def session(request):
     if _id not in request.app["sessions"]:
         return web.Response(status=404)
     session = request.app["sessions"][_id]
-    return web.json_response(dict(id=_id, pid=session.process.pid))
+    return web.json_response(dict(id=_id, size=session['size'],
+                                  hash=session['hash']))
 
 
 @routes.put("/session/{id}/_kill")
