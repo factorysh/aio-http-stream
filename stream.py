@@ -120,9 +120,18 @@ async def kill(request):
     return web.Response(status=204)
 
 
+async def on_startup(app):
+    async def loop():
+        while True:
+            await asyncio.sleep(app["sessions"].max_age)
+            print("Startup loop :", app["sessions"].garbage_collector())
+    return asyncio.ensure_future(loop())
+
+
 if __name__ == "__main__":
     app = web.Application()
     app["cmd"] = "cat ~/Downloads/UC-CAP_video.mp4"
     app["sessions"] = Session(max_size=100, max_age=180)
+    app.on_startup.append(on_startup)
     app.add_routes(routes)
     web.run_app(app)
