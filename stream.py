@@ -4,6 +4,8 @@ from io import BytesIO
 
 from aiohttp import web
 
+from session import Session
+
 
 async def read_process(process, read_stdout, read_stderr):
         out = asyncio.ensure_future(read_stdout(process.stdout))
@@ -30,6 +32,7 @@ HTTP_CHUNK = 1024 ** 2
 async def run_cmd(request):
     r = web.StreamResponse()
     session = uuid.uuid4()
+    request.app['sessions'][session.hex] = None
     r.headers['X-Session'] = session.hex
     await r.prepare(request)
     r.enable_chunked_encoding()
@@ -59,9 +62,20 @@ async def run_cmd(request):
     await run(request.app['cmd'], stdout, stderr)
 
 
+@routes.get('/session')
+async def sessions(request):
+    return web.json_response(request.app['sessions'].keys())
+
+@routes.get('/session/{id}')
+async def session(request, id):
+    if id not in request.app['sessions']:
+        return web.Response(status=404)
+
+
+
 if __name__ == "__main__":
     app = web.Application()
     app['cmd'] = 'tree ~/Downloads/'
-    app['sessions'] = dict()
+    app['sessions'] = Session(max_size=100, max_age=180)
     app.add_routes(routes)
     web.run_app(app)
