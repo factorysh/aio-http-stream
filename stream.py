@@ -31,21 +31,14 @@ class ReadingProcess:
         return self.process.returncode
 
 
-async def run(cmd: str, read_out, read_err) -> ReadingProcess:
-    proc = await asyncio.create_subprocess_shell(
-        cmd, stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE
-    )
-    return ReadingProcess(proc, read_out, read_err)
-
-
 routes = web.RouteTableDef()
 
 READ_CHUNK = 1024 ** 2
 HTTP_CHUNK = 1024 ** 2
 
 
-@routes.get("/")
-async def run_cmd(request):
+async def read_it_for_me(request: web.Request, process: Process) -> None:
+    "Read this process for me."
     r = web.StreamResponse()
     session = uuid.uuid4()
     r.headers["X-Session"] = session.hex
@@ -88,7 +81,7 @@ async def run_cmd(request):
                 break
             print(line)
 
-    p = await run(request.app["cmd"], stdout, stderr)
+    p = ReadingProcess(process, stdout, stderr)
     await p.wait()
     request.app["sessions"][session.hex] = dict(
         process=p, size=s.value, hash=m.hexdigest()
@@ -125,13 +118,29 @@ async def on_startup(app):
         while True:
             await asyncio.sleep(app["sessions"].max_age)
             print("Garbage collection :", app["sessions"].garbage_collector())
+
     return asyncio.ensure_future(loop())
 
 
-if __name__ == "__main__":
+def App(max_size=100, max_age=180) -> web.Application:
     app = web.Application()
-    app["cmd"] = "cat ~/Downloads/UC-CAP_video.mp4"
-    app["sessions"] = Session(max_size=100, max_age=180)
+    app["sessions"] = Session(max_size=max_size, max_age=max_age)
     app.on_startup.append(on_startup)
     app.add_routes(routes)
+    return app
+
+
+if __name__ == "__main__":
+
+    async def run_cmd(request):
+        cmd = request.app["cmd"]
+        proc = await asyncio.create_subprocess_shell(
+            cmd, stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE
+        )
+        await read_it_for_me(request, proc)
+
+    app = App()
+    app.add_routes([web.get("/", run_cmd)])
+    app["cmd"] = "cat ~/Downloads/UC-CAP_video.mp4"
+
     web.run_app(app)
