@@ -124,7 +124,7 @@ async def on_startup(app):
     async def loop():
         while True:
             await asyncio.sleep(app["sessions"].max_age)
-            print("Startup loop :", app["sessions"].garbage_collector())
+            print("Garbage collection :", app["sessions"].garbage_collector())
     return asyncio.ensure_future(loop())
 
 
