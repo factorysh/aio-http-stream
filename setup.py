@@ -1,10 +1,10 @@
 from setuptools import setup, find_packages
 
 setup(
-    name='aio-http-stream',
+    name='aiohttp-stream',
     version='0.1',
     description='',
-    url='https://github.com/factorysh/aio-http-stream',
+    url='https://github.com/factorysh/aiohttp-stream',
     install_requires=[
         'aiohttp',
     ],

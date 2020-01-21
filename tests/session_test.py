@@ -1,5 +1,5 @@
 import time
-from aio_http_stream.session import Session
+from aiohttp_stream.session import Session
 
 
 def test_session():
