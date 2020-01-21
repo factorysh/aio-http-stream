@@ -12,7 +12,7 @@ setup(
     extras_require={
         'test': ['pytest', 'pytest-cov', 'pytest-mock', 'pytest-asyncio'],
     },
-    licence="3 terms BSD",
+    license="3 terms BSD",
     classifiers=[
       'Operating System :: MacOS',
       'Operating System :: POSIX',
